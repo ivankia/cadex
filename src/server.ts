@@ -46,7 +46,7 @@ async function build() {
 
   app.addHook('onClose', async (instance) => {
     instance.log.info('Closing Redis connection...');
-    await redis.quit();
+    await redis.close();
     console.log('Redis connection closed.');
   });
 
