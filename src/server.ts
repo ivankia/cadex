@@ -44,22 +44,56 @@ async function build() {
     }
   });
 
-  app.addHook('onClose', async () => {
-    await redis.close();
+  app.addHook('onClose', async (instance) => {
+    instance.log.info('Closing Redis connection...');
+    await redis.quit();
+    console.log('Redis connection closed.');
   });
 
   return app;
 }
 
+async function startServer() {
+  const app = await build();
+
+  const address = await app.listen({
+    port: Number(process.env.PORT) || 3000,
+    host: '0.0.0.0'
+  });
+
+  console.log(`Server listening at ${address}`);
+
+  const shutdown = async (signal: string) => {
+    console.log(`Received ${signal}, starting graceful shutdown...`);
+
+    try {
+      await app.close();
+      console.log('Server closed successfully');
+      process.exit(0);
+    } catch (err) {
+      console.error('Error during shutdown:', err);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+    shutdown('uncaughtException');
+  });
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    shutdown('unhandledRejection');
+  });
+}
+
 if (require.main === module) {
   console.log('Starting application...');
-  build()
-    .then((app) => app.listen({ port: Number(process.env.PORT) || 3000, host: '0.0.0.0' }))
-    .then((address) => console.log(`Server listening at ${address}`))
-    .catch((err) => {
-      console.error(err);
-      process.exit(1);
-    });
+  startServer().catch((err) => {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  });
 }
 
 export default build;
