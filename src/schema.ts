@@ -1,5 +1,4 @@
 import type { RouteShorthandOptions } from 'fastify'
-import { error } from 'node:console'
 
 export const opts: RouteShorthandOptions = {
   schema: {
