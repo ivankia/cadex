@@ -18,14 +18,13 @@ async function build() {
   app.log.info(`Connected to Redis ${redisUrl}`);
 
   app.post<{ Body: BookingRequest }>('/reserve', opts, async (request, reply) => {
-    const { user_id: userId, seat_id: seatId } = request.body;
-    const seatKey = `seat:${seatId}`;
-
+    const booking: BookingRequest = request.body;
+    app.log.info(`Received booking request: ${JSON.stringify(booking)}`);
     try {
-      app.log.info(`Booking attempt: seat ${seatId}, user ${userId}`);
+      app.log.info(`Booking attempt: seat ${booking.seat_id}, user ${booking.user_id}`);
 
       // Race condition via lua script
-      const reserved = await redis.eval(reserveLua, { keys: [seatKey], arguments: [String(userId)] });
+      const reserved = await redis.eval(reserveLua, { keys: [booking.seat_id], arguments: [booking.user_id] });
       const isReserved = reserved === 1;
       const response: BookingResponse = {
         success: Boolean(isReserved),
